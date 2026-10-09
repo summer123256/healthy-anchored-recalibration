@@ -16,7 +16,7 @@ A tiny 1-D CNN is trained on bearing vibration data, quantised to int8 and run o
 | `firmware/model/` | Placeholder model (random weights) for testing the toolchain; replaced by an exported model |
 | `firmware/host_test/` | PC builds of the firmware: bit-exactness tests and a "virtual MCU" for testing the serial scripts without hardware |
 
-## 1. Computer experiments (Sections 4–5.6 of the paper)
+## 1. Computer experiments (Sections 4–5.4 of the paper and the supplementary material)
 
 Python 3.10+:
 
@@ -43,7 +43,7 @@ Data (not included):
 Run (this is the exact sequence used for the paper; `--use-ckpt` reuses the trained source models, and because training is deterministic it gives the same results as retraining):
 
 ```bash
-python check_theory.py                                   # Section 4.6, Table 4, Fig. 3 (synthetic data)
+python check_theory.py                                   # Supplementary S1: Table S1, Fig. S1 (synthetic data)
 python experiments_tta.py --scenario C1                  # E0, E1, E5: main results, 5 seeds, 60 epochs
 python experiments_tta.py --scenario C2
 python experiments_tta.py --scenario P
@@ -55,28 +55,28 @@ python experiments_tta.py --scenario C2 --supplement --use-ckpt
 python experiments_tta.py --scenario P  --supplement --use-ckpt
 python experiments_tta.py --gate                         # pre-registered success criteria
 python b2_tuned_report.py                                # selects alpha for B2* on the development targets
-python stats_test.py                                     # Wilcoxon + Holm, all 7 targets (Table 7, top)
-python stats_test.py --held-out                          # held-out targets only (Table 7, bottom)
+python stats_test.py                                     # Wilcoxon + Holm, all 7 targets (Table 6, top)
+python stats_test.py --held-out                          # held-out targets only (Table 6, bottom)
 python stats_test.py --ref M3                            # statistics for M3
-python make_figures.py --paper --lang en                 # Figures 3-8 (use --lang zh for Chinese labels)
+python make_figures.py --paper --lang en                 # Fig. 3 and Figs. S1-S5 (use --lang zh for Chinese labels)
 ```
 
 Where each result appears in the paper:
 
 | Result file (`results/`) | Paper |
 |---|---|
-| `theory_check.json` | Table 4, Fig. 3 |
-| `tta_<scenario>_e0.csv`, `tta_<scenario>_supp.csv` | Table 5 |
-| `tta_<scenario>_main.csv`, `tta_<scenario>_summary.csv` | Table 6, Table A1, Fig. 4 |
-| `stats_wilcoxon_M3L1.csv`, `stats_wilcoxon_M3L1_heldout.csv` | Table 7 |
-| `tta_<scenario>_supp.csv`, `b2_tuned_report.json` | Table 8 |
-| `tta_<scenario>_ablation.csv` | Table 9, Figs. 5, 6, 8 |
-| `tta_<scenario>_e5_allseeds.json` | Table 10, Fig. 7 |
-| `table11_mcu.csv`, `export/<model>/hil_*.json` | Tables 11 and 12 |
+| `theory_check.json` | Table S1, Fig. S1 (`fig3_theory_synthetic`) |
+| `tta_<scenario>_e0.csv`, `tta_<scenario>_supp.csv` | Table 4 |
+| `tta_<scenario>_main.csv`, `tta_<scenario>_summary.csv` | Table 5, Table S3, Fig. S2 (`fig4_main`) |
+| `stats_wilcoxon_M3L1.csv`, `stats_wilcoxon_M3L1_heldout.csv` | Table 6 |
+| `tta_<scenario>_supp.csv`, `b2_tuned_report.json` | Table S2 and B2\* in Tables 5–6 |
+| `tta_<scenario>_ablation.csv` | Table 7, Fig. 3 (`fig5_contamination`), Figs. S3 (`fig8_layers`) and S4 (`fig6_windows`) |
+| `tta_<scenario>_e5_allseeds.json` | Table 8, Fig. S5 (`fig7_assumption_a`) |
+| build output, `table11_mcu.csv`, `export/<model>/hil_*.json` | Tables 9 and 10 |
 
 The source models are saved as `checkpoints/tta_<scenario>_s<seed>_e60.pt`.
 
-## 2. On-board experiment (Section 5.7, Tables 11–12)
+## 2. On-board experiment (Section 5.5, Tables 9–10)
 
 Hardware: STM32F103C8T6 minimum system board, ST-Link V2, USB-to-UART module (CH340). Wiring:
 
