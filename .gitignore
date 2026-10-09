@@ -1,0 +1,13 @@
+# data and generated files (not part of the repository)
+python/data/
+python/checkpoints/
+python/export/
+python/results/
+venv/
+python/venv/
+__pycache__/
+*.pyc
+firmware/project_make/build/
+firmware/project_make/cmake-build-*/
+firmware/tools/build_clang/
+.idea/
