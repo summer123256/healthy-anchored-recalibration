@@ -92,7 +92,7 @@ def fig_main(scenarios):
     targets = list(dict.fromkeys(r["target"] for r in rows))
     methods = [m for m in ORDER if any(r["method"] == m for r in rows)]
     w = 0.8 / len(methods)
-    fig, ax = plt.subplots(figsize=(max(6, 1.1 * len(targets) + 2), 3.2))
+    fig, ax = plt.subplots(figsize=(7.5, 3.6))
     for j, m in enumerate(methods):
         mean = [next((float(r["acc_mean"]) for r in rows if r["target"] == t and r["method"] == m), np.nan)
                 for t in targets]
@@ -104,7 +104,7 @@ def fig_main(scenarios):
     ax.set_xticklabels(targets)
     ax.set_ylabel(T("准确率 (%)", "Accuracy (%)"))
     ax.set_ylim(0, 105)
-    ax.legend(ncol=4, fontsize=7, loc="upper center", bbox_to_anchor=(0.5, 1.28), frameon=False)
+    ax.legend(ncol=3, fontsize=9, loc="upper center", bbox_to_anchor=(0.5, 1.42), frameon=False)
     ax.grid(axis="y", alpha=0.3)
     save(fig, "fig4_main")
 

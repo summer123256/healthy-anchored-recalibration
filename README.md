@@ -59,6 +59,7 @@ python stats_test.py                                     # Wilcoxon + Holm, all 
 python stats_test.py --held-out                          # held-out targets only (Table 6, bottom)
 python stats_test.py --ref M3                            # statistics for M3
 python make_figures.py --paper --lang en                 # Fig. 3 and Figs. S1-S5 (use --lang zh for Chinese labels)
+python run_m1l1.py --use-ckpt                            # M1L1 control: first layer only, all-class anchor
 ```
 
 Where each result appears in the paper:
@@ -72,9 +73,12 @@ Where each result appears in the paper:
 | `tta_<scenario>_supp.csv`, `b2_tuned_report.json` | Table S2 and B2\* in Tables 5–6 |
 | `tta_<scenario>_ablation.csv` | Table 7, Fig. 3 (`fig5_contamination`), Figs. S3 (`fig8_layers`) and S4 (`fig6_windows`) |
 | `tta_<scenario>_e5_allseeds.json` | Table 8, Fig. S5 (`fig7_assumption_a`) |
+| `tta_m1l1.csv`, `tta_m1l1_e0.csv`, `tta_m1l1_check.json` | M1L1 in Section 5.1–5.2, Table 7, Table S4 |
 | build output, `table11_mcu.csv`, `export/<model>/hil_*.json` | Tables 9 and 10 |
 
 The source models are saved as `checkpoints/tta_<scenario>_s<seed>_e60.pt`.
+
+`run_m1l1.py` also recomputes M3L1 with the same calibration windows and checks it against `tta_<scenario>_main.csv` (`tta_m1l1_check.json`). Every on-board calibration starts from the factory parameters, so repeated calibrations do not accumulate.
 
 ## 2. On-board experiment (Section 5.5, Tables 9–10)
 

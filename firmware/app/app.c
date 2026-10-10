@@ -353,8 +353,11 @@ static void do_calibrate(const uint8_t *pl, uint16_t len)
     if (layers > TC_NUM_CALIB) layers = TC_NUM_CALIB;
     uint16_t used;
     uint32_t compute;
+    tc_reset_params();                              /* 每次校准都从出厂参数开始，重复校准不会累积 */
+    s_calibrated = 0;
     const uint32_t ms0 = HAL_GetTick();
     int8_t status = calibrate_run(n, anchor, scale, layers, &used, &compute, oled_ok() ? 2 : 0);
+    if (status != 0) tc_reset_params();             /* 中止或失败：恢复出厂参数，避免只校准了一半 */
     const uint32_t ms = HAL_GetTick() - ms0;
     if (status == 0) s_calibrated = 1;
     ui_status();
