@@ -10,6 +10,7 @@ DATA_DIR = ROOT / "data"
 CWRU_DIR = DATA_DIR / "cwru"          # 存放 CWRU 的 .mat 文件
 FAN_DIR = DATA_DIR / "fan"            # 存放自建风扇数据 (.npz)
 PU_DIR = DATA_DIR / "pu"              # 存放帕德博恩大学轴承数据（解压后的 .mat）
+JNU_DIR = DATA_DIR / "jnu"            # 存放江南大学轴承数据（12 个 .csv）
 RESULT_DIR = ROOT / "results"         # 实验结果 (csv / png / json)
 CKPT_DIR = ROOT / "checkpoints"       # 训练好的模型
 EXPORT_DIR = ROOT / "export"          # 导出给 STM32 的 C 文件
@@ -100,3 +101,24 @@ PU_DECIMATE = 4                                  # 64 kHz -> 16 kHz（先抗混�
 PU_SOURCE_SPLIT = {"train": range(1, 13), "val": range(13, 17), "test": range(17, 21)}   # 按测量序号划分
 PU_TARGET_SPLIT = {"calib": range(1, 7), "test": range(7, 21)}
 PU_INT16_TARGET = 16000.0                        # 源域训练数据 99.99% 分位的幅值映射到的 int16 计数
+
+
+# ---------------------------------------------------------------------------
+# 江南大学（JNU）轴承数据集（补充验证：换转速，全部为留出目标域）
+#   下载：git clone https://github.com/ClarkGableWang/JNU-Bearing-Dataset.git data/jnu
+#         （或在该网页 Code → Download ZIP，解压后把 12 个 .csv 放到 data/jnu/）
+#   文件：n<转速>_3_2.csv（正常）、ib<转速>_2.csv（内圈）、ob<转速>_2.csv（外圈）、tb<转速>_2.csv（滚动体），
+#         转速 600 / 800 / 1000 r/min，竖直方向加速度，采样率 50 kHz，每行一个数
+#   设置在看到任何结果之前固定：源域 1000 r/min，目标域 J1 = 800 r/min、J2 = 600 r/min（均为留出目标域）
+# ---------------------------------------------------------------------------
+JNU_CLASSES = ["Normal", "IR", "OR", "Ball"]     # 正常 / 内圈 / 外圈 / 滚动体
+JNU_PREFIX = {"Normal": "n{rpm}_3_2", "IR": "ib{rpm}_2", "OR": "ob{rpm}_2", "Ball": "tb{rpm}_2"}
+JNU_FS = 50000
+JNU_DECIMATE = 3                                 # 50 kHz -> 16.7 kHz（先抗混叠滤波），与 PU 的 16 kHz 接近
+JNU_SAMPLES = 500500                             # 每类只用前 500 500 点（10 s），正常类文件更长，截取后各类等长
+JNU_SOURCE = 1000
+JNU_TARGETS = {"J1": 800, "J2": 600}
+JNU_SOURCE_SPLIT = (0.6, 0.2, 0.2)               # 源域按时间顺序：训练 / 验证 / 测试
+JNU_TARGET_CALIB = 0.3                           # 目标域：前 30% 为校准段，其余为测试段
+JNU_INT16_TARGET = 16000.0                       # 源域训练数据 99.99% 分位的幅值映射到的 int16 计数
+

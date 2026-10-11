@@ -5,6 +5,7 @@
   C1  CWRU 跨传感器位置：驱动端 DE（0–3 HP）训练 → 风扇端 FE（0–3 HP）测试
   C2  CWRU 跨负载：驱动端 0 HP 训练 → 1 / 2 / 3 HP 分别测试
   P   帕德博恩 PU（真实损伤轴承）：N15_M07_F10 训练 → P1 换转速 / P2 换负载扭矩 / P3 换径向力
+  J   江南大学 JNU（补充验证）：1000 r/min 训练 → J1 800 r/min / J2 600 r/min（换转速，均为留出目标域）
   F   风扇台（可选，需自采数据）：源域 S0 → F1–F4（缺少的场景自动跳过）
 方法（M0–M3、B1、B2 为纯整数实现，与单片机逐位一致；M4、B3 需要 PyTorch）：
   M0 不自适应；M1 常规重校准（锚定源域全部类别，仅用正常数据）；
@@ -44,7 +45,7 @@ import time
 import numpy as np
 from sklearn.metrics import f1_score
 
-from config import CKPT_DIR, CWRU_CLASSES, FAN_CLASSES, PU_CLASSES, PU_TARGETS, RESULT_DIR
+from config import CKPT_DIR, CWRU_CLASSES, FAN_CLASSES, JNU_CLASSES, JNU_TARGETS, PU_CLASSES, PU_TARGETS, RESULT_DIR
 from preprocess import int8_to_model_input, preprocess_int16, to_int16
 from quant import conv_layer_indices, forward_acc, int_forward, quantize
 from recal import (WindowStream, mixed_stream, recalibrate, recalibrate_alpha_bn, recalibrate_dua,
@@ -91,6 +92,16 @@ def load_scenario(name):
             Xt, yt, _ = t["test"]
             targets.append(dict(name=tname, healthy=Xc[yc == 0], pool=(Xc, yc), test=(Xt, yt)))
         return src, targets, PU_CLASSES, dict(dataset="pu")
+    if name == "J":
+        from data_jnu import build_jnu_source, build_jnu_target
+        src = build_jnu_source()
+        targets = []
+        for tname in JNU_TARGETS:
+            t = build_jnu_target(tname)
+            Xc, yc, _ = t["calib"]
+            Xt, yt, _ = t["test"]
+            targets.append(dict(name=tname, healthy=Xc[yc == 0], pool=(Xc, yc), test=(Xt, yt)))
+        return src, targets, JNU_CLASSES, dict(dataset="jnu")
     if name == "F":
         from data_fan import build_fan_source, build_fan_target
         src = build_fan_source()
@@ -480,7 +491,7 @@ def gate():
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--scenario", choices=["C1", "C2", "P", "F"])
+    ap.add_argument("--scenario", choices=["C1", "C2", "P", "J", "F"])
     ap.add_argument("--gate", action="store_true")
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--seeds", type=int, nargs="+", default=None, help="默认 0 1 2 3 4")

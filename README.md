@@ -62,6 +62,17 @@ python make_figures.py --paper --lang en                 # Fig. 3 and Figs. S1-S
 python run_m1l1.py --use-ckpt                            # M1L1 control: first layer only, all-class anchor
 ```
 
+Check on a third dataset (Section 5.2, finding (5); supplementary S6): the Jiangnan University (JNU) bearing data, speed change, with all settings and the decision rule (M3L1 above M0 on both targets) fixed before any result was seen: source 1000 r/min, targets J1 = 800 r/min and J2 = 600 r/min. Put the 12 `.csv` files of https://github.com/ClarkGableWang/JNU-Bearing-Dataset in `data/jnu/`, then:
+
+```bash
+python data_jnu.py                                       # check files and window counts
+python experiments_tta.py --scenario J                   # main results, 5 seeds, 60 epochs
+python experiments_tta.py --scenario J --supplement --use-ckpt   # B2* (alpha = 0.1)
+python run_m1l1.py --use-ckpt --scenarios J              # M1L1 control -> tta_m1l1_J*.csv
+```
+
+On Windows, when the output is redirected to a file (`> log.txt`), add `-X utf8` (for example `python -X utf8 experiments_tta.py --scenario J > J_log.txt 2>&1`), because some printed symbols cannot be encoded in the default console code page.
+
 Where each result appears in the paper:
 
 | Result file (`results/`) | Paper |
@@ -74,6 +85,7 @@ Where each result appears in the paper:
 | `tta_<scenario>_ablation.csv` | Table 7, Fig. 3 (`fig5_contamination`), Figs. S3 (`fig8_layers`) and S4 (`fig6_windows`) |
 | `tta_<scenario>_e5_allseeds.json` | Table 8, Fig. S5 (`fig7_assumption_a`) |
 | `tta_m1l1.csv`, `tta_m1l1_e0.csv`, `tta_m1l1_check.json` | M1L1 in Section 5.1–5.2, Table 7, Table S4 |
+| `tta_J_*.csv`, `tta_J_source.json`, `tta_m1l1_J*.csv`, `tta_m1l1_J_check.json` | Section 5.2 (5), Table S5 and Section S6 |
 | build output, `table11_mcu.csv`, `export/<model>/hil_*.json` | Tables 9 and 10 |
 
 The source models are saved as `checkpoints/tta_<scenario>_s<seed>_e60.pt`.

@@ -12,7 +12,8 @@ M1L1 与 M3L1 只差一处：第一层使用的源域锚点（全部类别 vs �
 
 用法（需已有原始数据和 checkpoints，与 experiments_tta.py 相同）：
   python run_m1l1.py --use-ckpt                 # C1、C2、P 三个场景，5 个种子
-  python run_m1l1.py --use-ckpt --scenarios P   # 只跑某个场景
+  python run_m1l1.py --use-ckpt --scenarios P   # 只跑某个场景（结果另存为 tta_m1l1_P*.csv）
+  python run_m1l1.py --use-ckpt --scenarios J   # JNU 补充验证（结果存为 tta_m1l1_J*.csv）
 结果：results/tta_m1l1.csv、results/tta_m1l1_e0.csv、results/tta_m1l1_check.json
 """
 import argparse
@@ -99,15 +100,16 @@ def main():
             first_layer_sigA_over_sigH=dict(median=float(np.median(ratios)), min=float(np.min(ratios)),
                                             max=float(np.max(ratios))))
         print(f"  {sc}：M3L1 与已有主结果比较 {len(diffs)} 项，最大差 {check[sc]['m3l1_max_abs_diff_vs_main']}")
-    for name, data in (("tta_m1l1.csv", rows), ("tta_m1l1_e0.csv", e0)):
+    tag = "" if a.scenarios == ["C1", "C2", "P"] else "_" + "_".join(a.scenarios)   # 其他场景单独存文件，不覆盖已有结果
+    for name, data in ((f"tta_m1l1{tag}.csv", rows), (f"tta_m1l1{tag}_e0.csv", e0)):
         with open(RESULT_DIR / name, "w", newline="", encoding="utf-8") as f:
             w = csv.DictWriter(f, fieldnames=list(data[0].keys()))
             w.writeheader()
             w.writerows(data)
         print(f"  -> {RESULT_DIR / name}")
-    (RESULT_DIR / "tta_m1l1_check.json").write_text(json.dumps(check, indent=2, ensure_ascii=False),
-                                                     encoding="utf-8")
-    print(f"  -> {RESULT_DIR / 'tta_m1l1_check.json'}")
+    (RESULT_DIR / f"tta_m1l1{tag}_check.json").write_text(json.dumps(check, indent=2, ensure_ascii=False),
+                                                           encoding="utf-8")
+    print(f"  -> {RESULT_DIR / f'tta_m1l1{tag}_check.json'}")
     print(f"完成，用时 {time.time() - t0:.0f} 秒")
 
 
