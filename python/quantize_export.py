@@ -4,6 +4,7 @@
 用法：
   python quantize_export.py --ckpt checkpoints/cwru_tiny_main.pt --name tiny
   python quantize_export.py --ckpt checkpoints/pu_tiny_s0.pt --name pu_tiny      （帕德博恩数据）
+  python quantize_export.py --ckpt checkpoints/tta_J_s0_e60.pt --name jnu_tiny --dataset jnu   （江南大学数据）
   （CWRU 跨负载场景 C2 只用 0 HP 训练时，加 --train-loads 0）
 
 步骤：
@@ -22,21 +23,41 @@ import json
 import pickle
 
 import numpy as np
-import torch
 
-from config import EXPORT_DIR, MCU_FLASH_BYTES, MCU_RAM_BYTES
+from config import EXPORT_DIR, JNU_CLASSES, MCU_FLASH_BYTES, MCU_RAM_BYTES
 from export_c import export_model_c, export_vectors_bin, export_vectors_header
-from models import build_model, export_graph
 from preprocess import int8_to_model_input, preprocess_int16, to_int16
 from quant import float_forward, fold_bn, int_forward, memory_report, quantize
 from recal import source_stats
+
+
+def infer_dataset(classes, n_classes):
+    """模型文件里没有记录数据集时，按类别推断：JNU 的 4 类、帕德博恩的 3 类，其余为 CWRU。"""
+    if list(classes) == list(JNU_CLASSES):
+        return "jnu"
+    return "pu" if n_classes == 3 else "cwru"
+
+
+def load_source(dataset, channel="DE", loads=(0, 1, 2, 3)):
+    """读取源域数据：{'train'|'val'|'test': (X, y, 类别)}，X 为浮点窗口（int16 计数单位）。"""
+    if dataset == "cwru":
+        from data_cwru import build_cwru
+        return build_cwru(loads=tuple(loads), channel=channel)
+    if dataset == "pu":
+        from data_pu import build_pu_source
+        return build_pu_source()
+    if dataset == "jnu":
+        from data_jnu import build_jnu_source
+        return build_jnu_source()
+    from data_fan import build_fan_source
+    return build_fan_source()
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", required=True)
     ap.add_argument("--name", default="tiny")
-    ap.add_argument("--dataset", default=None, choices=["cwru", "pu", "fan"],
+    ap.add_argument("--dataset", default=None, choices=["cwru", "pu", "jnu", "fan"],
                     help="默认从模型文件中读取训练时的设置")
     ap.add_argument("--channel", default=None, choices=["DE", "FE"])
     ap.add_argument("--train-loads", type=int, nargs="+", default=None,
@@ -46,6 +67,8 @@ def main():
     ap.add_argument("--target-vectors", type=int, default=2, help="写入单片机的自检向量数")
     a = ap.parse_args()
 
+    import torch
+    from models import build_model, export_graph
     ck = torch.load(a.ckpt, map_location="cpu")
     model = build_model(ck["model"], ck["n_classes"])
     model.load_state_dict(ck["state_dict"])
@@ -53,22 +76,14 @@ def main():
     classes = ck["classes"]
     cfg = ck.get("args", {}) or {}
     dataset = a.dataset or cfg.get("dataset")
-    if dataset is None:   # 模型文件里没有记录数据集时：3 类为帕德博恩，否则为 CWRU（建议显式给出 --dataset）
-        dataset = "pu" if ck["n_classes"] == 3 else "cwru"
-        print(f"提示：模型文件未记录数据集，按类别数推断为 {dataset}；如不对请加 --dataset")
+    if dataset is None:   # 模型文件里没有记录数据集时按类别推断（建议显式给出 --dataset）
+        dataset = infer_dataset(classes, ck["n_classes"])
+        print(f"提示：模型文件未记录数据集，按类别推断为 {dataset}；如不对请加 --dataset")
     channel = a.channel or cfg.get("channel", "DE")
     loads = a.train_loads or cfg.get("train_loads", [0, 1, 2, 3])
     print(f"源域设置：dataset={dataset}" + (f"，channel={channel}，负载={loads}" if dataset == "cwru" else ""))
 
-    if dataset == "cwru":
-        from data_cwru import build_cwru
-        ds = build_cwru(loads=tuple(loads), channel=channel)
-    elif dataset == "pu":
-        from data_pu import build_pu_source
-        ds = build_pu_source()
-    else:
-        from data_fan import build_fan_source
-        ds = build_fan_source()
+    ds = load_source(dataset, channel, loads)
     Xtr, ytr, _ = ds["train"]
     Xte, yte, _ = ds["test"]
 

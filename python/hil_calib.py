@@ -14,7 +14,9 @@
   python hil_calib.py --port COM5 --model-dir export/tiny --scenario C1
   python hil_calib.py --port COM5 --model-dir export/tiny_c2 --scenario C2-3HP --anchor all
   python hil_calib.py --port COM5 --model-dir export/fan_tiny --scenario F2
+  python hil_calib.py --port COM5 --model-dir export/jnu_tiny --scenario J1
 场景：C1（风扇端 FE 通道）；C2-1HP / C2-2HP / C2-3HP（驱动端）；P1 / P2 / P3（帕德博恩，用 pu_tiny 模型）；
+      J1 / J2（江南大学 800 / 600 r/min，用 jnu_tiny 模型）；
       F1–F4（风扇台，可选）
 注意：模型要与场景的源域一致（C1 用全负载 DE 训练的模型，C2 用 0 HP 训练的模型）。
 """
@@ -49,6 +51,12 @@ def load_target(name):
     if name in ("P1", "P2", "P3"):
         from data_pu import build_pu_target
         t = build_pu_target(name)
+        Xc, yc, _ = t["calib"]
+        Xt, yt, _ = t["test"]
+        return Xc[yc == 0], Xt, yt
+    if name in ("J1", "J2"):
+        from data_jnu import build_jnu_target
+        t = build_jnu_target(name)
         Xc, yc, _ = t["calib"]
         Xt, yt, _ = t["test"]
         return Xc[yc == 0], Xt, yt

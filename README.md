@@ -111,6 +111,7 @@ UART: 460 800 bit/s, 8N1. OLED (I2C1, PB6/PB7) and ADXL345 are optional and not 
 python quantize_export.py --ckpt checkpoints/tta_P_s0_e60.pt  --name pu_tiny  --dataset pu
 python quantize_export.py --ckpt checkpoints/tta_C2_s0_e60.pt --name cwru_c2  --dataset cwru --train-loads 0
 python quantize_export.py --ckpt checkpoints/tta_C1_s0_e60.pt --name cwru_c1  --dataset cwru --train-loads 0 1 2 3
+python quantize_export.py --ckpt checkpoints/tta_J_s0_e60.pt  --name jnu_tiny --dataset jnu      # JNU check (supplementary S6)
 ```
 
 **Build** `firmware/project_make` with CMake and the Arm GNU Toolchain (`arm-none-eabi-gcc`, -O2), e.g. in CLion with CMake options
@@ -129,7 +130,7 @@ python hil_test.py  --port COM5 --model-dir export/pu_tiny --n 500             #
 python hil_calib.py --port COM5 --model-dir export/pu_tiny --scenario P1       # on-board M3L1 calibration
 python hil_calib.py --port COM5 --model-dir export/pu_tiny --scenario P2
 python hil_calib.py --port COM5 --model-dir export/pu_tiny --scenario P3
-# CWRU C2 model: C2-1HP, C2-2HP, C2-3HP; CWRU C1 model: C1
+# CWRU C2 model: C2-1HP, C2-2HP, C2-3HP; CWRU C1 model: C1; JNU model (export/jnu_tiny): J1, J2
 python hil_summary.py                                                          # -> results/table11_mcu.csv
 ```
 
