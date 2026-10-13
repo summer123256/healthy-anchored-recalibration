@@ -2,7 +2,7 @@
 
 Code for the paper **"Healthy-Data-Only, Gradient-Free On-Device Recalibration of an Integer-Only Vibration Fault Classifier on a 20 KB-RAM Microcontroller"**.
 
-The supplementary material of the paper (synthetic-data validation, α sensitivity of α-BN, macro-F1 and additional figures) is in [`docs/Supplementary_material.pdf`](docs/Supplementary_material.pdf).
+The supplementary material of the paper (synthetic-data validation, α sensitivity of α-BN, macro-F1, additional figures, the JNU check, per-target statistics, gain limits and confusion matrices) is in [`docs/Supplementary_material.pdf`](docs/Supplementary_material.pdf).
 
 A tiny 1-D CNN is trained on bearing vibration data, quantised to int8 and run on an STM32F103C8T6 (72 MHz Cortex-M3, 20 KB RAM, no FPU). After a domain shift, the board recalibrates the first convolutional layer using only 32 healthy-condition windows: per-channel accumulator statistics are aligned to healthy-class anchors computed offline, and the correction is folded into the integer bias and requantisation multiplier (method **M3L1**). No labels, no gradients, no floating point.
 
@@ -55,11 +55,12 @@ python experiments_tta.py --scenario C2 --supplement --use-ckpt
 python experiments_tta.py --scenario P  --supplement --use-ckpt
 python experiments_tta.py --gate                         # pre-registered success criteria
 python b2_tuned_report.py                                # selects alpha for B2* on the development targets
-python stats_test.py                                     # Wilcoxon + Holm, all 7 targets (Table 6, top)
-python stats_test.py --held-out                          # held-out targets only (Table 6, bottom)
+python stats_test.py                                     # Wilcoxon + Holm, all 7 targets (Table 7, top)
+python stats_test.py --held-out                          # held-out targets only (Table 7, bottom)
 python stats_test.py --ref M3                            # statistics for M3
 python make_figures.py --paper --lang en                 # Fig. 3 and Figs. S1-S5 (use --lang zh for Chinese labels)
 python run_m1l1.py --use-ckpt                            # M1L1 control: first layer only, all-class anchor
+python -X utf8 clip_and_confusion.py                     # gain limits of M3L1 and confusion matrices (Section S8), saved models only
 ```
 
 Check on a third dataset (Section 5.2, finding (5); supplementary S6): the Jiangnan University (JNU) bearing data, speed change, with all settings and the decision rule (M3L1 above M0 on both targets) fixed before any result was seen: source 1000 r/min, targets J1 = 800 r/min and J2 = 600 r/min. Put the 12 `.csv` files of https://github.com/ClarkGableWang/JNU-Bearing-Dataset in `data/jnu/`, then:
@@ -78,21 +79,22 @@ Where each result appears in the paper:
 | Result file (`results/`) | Paper |
 |---|---|
 | `theory_check.json` | Table S1, Fig. S1 (`fig3_theory_synthetic`) |
-| `tta_<scenario>_e0.csv`, `tta_<scenario>_supp.csv` | Table 4 |
-| `tta_<scenario>_main.csv`, `tta_<scenario>_summary.csv` | Table 5, Table S3, Fig. S2 (`fig4_main`) |
-| `stats_wilcoxon_M3L1.csv`, `stats_wilcoxon_M3L1_heldout.csv` | Table 6 |
-| `tta_<scenario>_supp.csv`, `b2_tuned_report.json` | Table S2 and B2\* in Tables 5–6 |
-| `tta_<scenario>_ablation.csv` | Table 7, Fig. 3 (`fig5_contamination`), Figs. S3 (`fig8_layers`) and S4 (`fig6_windows`) |
-| `tta_<scenario>_e5_allseeds.json` | Table 8, Fig. S5 (`fig7_assumption_a`) |
-| `tta_m1l1.csv`, `tta_m1l1_e0.csv`, `tta_m1l1_check.json` | M1L1 in Section 5.1–5.2, Table 7, Table S4 |
+| `tta_<scenario>_e0.csv`, `tta_<scenario>_supp.csv` | Table 5 |
+| `tta_<scenario>_main.csv`, `tta_<scenario>_summary.csv` | Table 6, Table S3, Fig. S2 (`fig4_main`) |
+| `stats_wilcoxon_M3L1.csv`, `stats_wilcoxon_M3L1_heldout.csv` | Table 7 |
+| `tta_<scenario>_supp.csv`, `b2_tuned_report.json` | Table S2 and B2\* in Tables 6–7 |
+| `tta_<scenario>_ablation.csv` | Table 8, Fig. 3 (`fig5_contamination`), Figs. S3 (`fig8_layers`) and S4 (`fig6_windows`) |
+| `tta_<scenario>_e5_allseeds.json` | Table 9, Fig. S5 (`fig7_assumption_a`) |
+| `tta_m1l1.csv`, `tta_m1l1_e0.csv`, `tta_m1l1_check.json` | M1L1 in Section 5.1–5.2, Table 8, Table S4 |
 | `tta_J_*.csv`, `tta_J_source.json`, `tta_m1l1_J*.csv`, `tta_m1l1_J_check.json` | Section 5.2 (5), Table S5 and Section S6 |
-| build output, `table11_mcu.csv`, `export/<model>/hil_*.json` | Tables 9 and 10 |
+| `clip_confusion/clip_summary.txt`, `clip_confusion/*.csv`, `clip_confusion/confusion_*.png` | Section 3.3 (gain limits), Section 5.2, Section S8, Table S7, Fig. S6 |
+| build output, `table11_mcu.csv`, `export/<model>/hil_*.json` | Tables 10 and 11 |
 
 The source models are saved as `checkpoints/tta_<scenario>_s<seed>_e60.pt`.
 
 `run_m1l1.py` also recomputes M3L1 with the same calibration windows and checks it against `tta_<scenario>_main.csv` (`tta_m1l1_check.json`). Every on-board calibration starts from the factory parameters, so repeated calibrations do not accumulate.
 
-## 2. On-board experiment (Section 5.5, Tables 9–10)
+## 2. On-board experiment (Section 5.5, Tables 10–11)
 
 Hardware: STM32F103C8T6 minimum system board, ST-Link V2, USB-to-UART module (CH340). Wiring:
 
@@ -105,38 +107,9 @@ Hardware: STM32F103C8T6 minimum system board, ST-Link V2, USB-to-UART module (CH
 
 UART: 460 800 bit/s, 8N1. OLED (I2C1, PB6/PB7) and ADXL345 are optional and not used in the paper.
 
-**Export a trained model to C** (writes `export/<name>/`):
+### Exploratory code not used in the paper
 
-```bash
-python quantize_export.py --ckpt checkpoints/tta_P_s0_e60.pt  --name pu_tiny  --dataset pu
-python quantize_export.py --ckpt checkpoints/tta_C2_s0_e60.pt --name cwru_c2  --dataset cwru --train-loads 0
-python quantize_export.py --ckpt checkpoints/tta_C1_s0_e60.pt --name cwru_c1  --dataset cwru --train-loads 0 1 2 3
-python quantize_export.py --ckpt checkpoints/tta_J_s0_e60.pt  --name jnu_tiny --dataset jnu      # JNU check (supplementary S6)
-```
-
-**Build** `firmware/project_make` with CMake and the Arm GNU Toolchain (`arm-none-eabi-gcc`, -O2), e.g. in CLion with CMake options
-
-```
--DCMAKE_TOOLCHAIN_FILE=arm-gcc-toolchain.cmake -DMODEL_DIR=<absolute path>/python/export/pu_tiny
-```
-
-or with `make MODEL_DIR=../../python/export/pu_tiny`. The build prints Flash and RAM usage. Flash `fault_tinyml.hex` with STM32CubeProgrammer (ST-Link) or OpenOCD (`openocd_stm32f103.cfg`), then reset the board.
-
-**Run the HIL tests** (replace `COM5` with your port):
-
-```bash
-python board_check.py --port COM5                                              # connection + on-board self-test
-python hil_test.py  --port COM5 --model-dir export/pu_tiny --n 500             # inference: bit-exactness, timing
-python hil_calib.py --port COM5 --model-dir export/pu_tiny --scenario P1       # on-board M3L1 calibration
-python hil_calib.py --port COM5 --model-dir export/pu_tiny --scenario P2
-python hil_calib.py --port COM5 --model-dir export/pu_tiny --scenario P3
-# CWRU C2 model: C2-1HP, C2-2HP, C2-3HP; CWRU C1 model: C1; JNU model (export/jnu_tiny): J1, J2
-python hil_summary.py                                                          # -> results/table11_mcu.csv
-```
-
-`hil_calib.py` calibrates the first layer by default (`--layers 1`, M3L1; `--layers 0` = all layers, M3). It reports the number of channels whose `b, M, s` match the Python reference, the logit bit-exactness before and after calibration, the board accuracy and the on-board cycle counts (DWT, excluding UART transfer).
-
-Without hardware (Linux/macOS/WSL with gcc): `python make_demo_export.py`, `python build_virtual_mcu.py --model-dir export/demo_tiny`, then use `--port virtual:export/demo_tiny`.
+The repository also contains an optional pipeline for a self-built fan test rig with an ADXL345 accelerometer (3200 Hz): `python/fan_collect.py`, `python/data_fan.py`, `python/device_calibrate.py`, `python/online_monitor.py`, the optional scenario `F` hooks in `experiments_tta.py`, `train.py`, `quantize_export.py`, `hil_calib.py` and `config.py`, and the ADXL345 / OLED drivers in `firmware/app/`. It was written for possible future work; no fan data were collected, and no result in the paper or the supplementary material depends on it. `python/experiments.py` and `python/baseline_svm.py` belong to an earlier version of the study and are likewise not used.
 
 ## Licence
 

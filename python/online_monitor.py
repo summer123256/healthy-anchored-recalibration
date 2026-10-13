@@ -2,7 +2,8 @@
 在线诊断监视
 ===========
 单片机自己采集 1024 点 -> 预处理 -> 推理，循环发送结果；电脑只负责显示和记录。
-这是论文“实际应用验证”部分的数据来源（此时电脑不参与任何计算）。
+此时电脑不参与任何计算。
+探索性原型（风扇台、ADXL345 采集）：论文中没有使用，也没有报告其结果；保留在仓库中供后续现场试验参考。
 
 用法：python online_monitor.py --port COM5 --classes fan --true-label Imbalance --seconds 60
 按 Ctrl+C 结束。结果追加写入 results/online_log.csv
